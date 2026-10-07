@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大井泵浦 DIY維修小學堂 - 跨影片智慧時間軸搜尋系統</title>
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --highlight: #fef08a;
+      --active-card: #e0f2fe;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 24px 16px;
+    }
+
+    .container {
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      color: #0369a1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 6px;
+    }
+
+    /* 影片選擇器 Tab */
+    .playlist-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .tab-btn {
+      background: #e2e8f0;
+      color: #334155;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-btn:hover {
+      background: #cbd5e1;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* 播放器視窗 */
+    .player-section {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 20px;
+    }
+
+    .current-video-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0369a1;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .video-wrapper {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #000;
+    }
+
+    .video-wrapper iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .playback-fallback {
+      position: absolute;
+      inset: 0;
+      background: #f1f5f9;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .playback-fallback[hidden] { display: none; }
+
+    .player-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .yt-direct-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #dc2626;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.88rem;
+    }
+
+    .yt-direct-link:hover {
+      text-decoration: underline;
+    }
+
+    /* 搜尋與過濾區塊 */
+    .search-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .search-box {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+
+    .filter-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .quick-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    .tag-title {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .tag-btn {
+      background: #f1f5f9;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tag-btn:hover {
+      background: #e2e8f0;
+      color: var(--primary);
+    }
+
+    .results-count {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 700px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .timeline-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .timeline-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08);
+    }
+
+    .timeline-card.active {
+      border-color: var(--primary);
+      background-color: var(--active-card);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .source-badge {
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .time-badge {
+      background: #0284c7;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .card-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .card-text {
+      font-size: 0.9rem;
+      color: #334155;
+      line-height: 1.5;
+    }
+
+    .highlight {
+      background-color: var(--highlight);
+      font-weight: 600;
+      padding: 1px 3px;
+      border-radius: 2px;
+    }
+
+    .jump-btn {
+      align-self: flex-start;
+      margin-top: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 5px 12px;
+      font-size: 0.84rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .jump-btn:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      background: var(--card-bg);
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>
+        <svg width="28" height="28" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
+        大井泵浦 WALRUS DIY維修小學堂 - 跨影片檢索系統
+      </h1>
+      <p>支援清單內所有教學影片內容搜尋，點擊任意命中時間點立即自動切換影片並精確定位秒數。</p>
+    </header>
+
+    <!-- 播放清單分頁籤 -->
+    <div class="playlist-tabs" id="playlistTabs"></div>
+
+    <div class="main-layout">
+      <!-- 播放器區塊 -->
+      <section class="player-section">
+        <div class="current-video-title" id="currentVideoTitle">載入中...</div>
+        <div class="video-wrapper">
+          <iframe 
+            id="videoPlayer" 
+            title="YouTube 教學影片播放器"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen>
+          </iframe>
+          <div id="playbackFallback" class="playback-fallback" hidden>
+            <p id="playbackMessage" role="status">影片暫時無法在此播放</p>
+            <a id="fallbackLink" class="jump-btn" target="_blank" rel="noopener">在 YouTube 播放此片段</a>
+            <button class="tag-btn" onclick="retryPlayback()">重試播放器</button>
+          </div>
+        </div>
+        <div class="player-actions">
+          <span id="playerLocationText">播放進度：00:00</span>
+          <a href="#" id="directYtLink" target="_blank" rel="noopener" class="yt-direct-link">
+            在 YouTube 上開啟此時間點 ↗
+          </a>
+        </div>
+      </section>
+
+      <!-- 搜尋與時間軸區塊 -->
+      <section class="search-section">
+        <div class="search-box">
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="search-input" 
+            placeholder="跨影片搜尋關鍵字（例如：軸封、壓力開關、水機身、小鋼珠、扭力扳手、壓力桶）..." 
+            autocomplete="off"
+          />
+          <div class="filter-options">
+            <label class="checkbox-label">
+              <input type="checkbox" id="searchAllVideosCheckbox" checked>
+              <span>搜尋播放清單全部影片（取消則僅搜尋目前影片）</span>
+            </label>
+          </div>
+          <div class="quick-tags">
+            <span class="tag-title">熱門詞：</span>
+            <button class="tag-btn" onclick="applyTag('軸封')">機械軸封</button>
+            <button class="tag-btn" onclick="applyTag('壓力開關')">壓力開關</button>
+            <button class="tag-btn" onclick="applyTag('水機身')">水機身</button>
+            <button class="tag-btn" onclick="applyTag('壓力桶')">壓力桶</button>
+            <button class="tag-btn" onclick="applyTag('葉輪')">葉輪</button>
+            <button class="tag-btn" onclick="applyTag('小鋼珠')">小鋼珠</button>
+            <button class="tag-btn" onclick="applyTag('扭力扳手')">扭力扳手</button>
+            <button class="tag-btn" onclick="applyTag('PTFE')">止洩帶 PTFE</button>
+            <button class="tag-btn" onclick="applyTag('')">全部顯示</button>
+          </div>
+        </div>
+
+        <div class="results-count" id="resultsCount">載入中...</div>
+
+        <!-- 卡片列表 -->
+        <div class="timeline-list" id="timelineList"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // 播放清單全部影片詳細 Transcript 結構庫
+    const playlistData = [
+      {
+        videoId: "BlWJsZIJ8wA",
+        ep: "ep.1",
+        title: "TP8系列 - 壓力桶 & 壓力開關 更換教學",
+        shortTitle: "ep.1 TP8 壓力桶 & 壓力開關",
+        timeline: [
+          { start: 10, time: "00:10", title: "工具介紹", text: "十字螺絲起子*1把、膠帶*1卷、PTFE螺紋密封帶*1卷。", tags: ["工具", "十字螺絲起子", "膠帶", "PTFE", "螺紋密封帶"] },
+          { start: 16, time: "00:16", title: "拆卸水機身螺絲", text: "取下水機身上半部十字螺絲 4 顆。", tags: ["螺絲", "水機身", "十字螺絲起子", "拆卸"] },
+          { start: 40, time: "00:40", title: "拆開接線盒", text: "拆開接線盒，取出內部線路。此為示範機器，正規品會因型號不同而有接線差異，請依盒內接線圖為主。", tags: ["接線盒", "線路", "接線圖"] },
+          { start: 50, time: "00:50", title: "拆開灰色線材並取下壓力桶", text: "拆開壓力開關的灰色線材，即可取下整顆舊壓力桶組件。", tags: ["壓力桶", "灰色線材", "壓力開關", "拆下"] },
+          { start: 58, time: "00:58", title: "旋下舊壓力開關", text: "取下壓力開關。接下來請拿取要更換的新零件（壓力開關或壓力桶）。", tags: ["壓力開關", "零件更換"] },
+          { start: 68, time: "01:08", title: "纏繞 PTFE 螺紋密封帶", text: "鎖附壓力開關牙口處纏上密封帶，建議纏繞兩圈，可視狀況調整纏繞圈數。", tags: ["PTFE", "螺紋密封帶", "止洩帶", "牙口", "防漏"] },
+          { start: 90, time: "01:30", title: "膠帶固定線材防止打結", text: "壓力開關線材用膠帶暫時固定，避免旋轉鎖入時打結。", tags: ["膠帶", "線材", "打結"] },
+          { start: 110, time: "01:50", title: "裝上新壓力開關並對齊出線位置", text: "裝上壓力開關，因有纏繞密封帶鎖上時會較難轉動，可以稍微出力鎖緊或調原先纏繞的密封帶。注意出線位置需對齊，避免無法順利連接接線盒。", tags: ["壓力開關", "對齊", "出線位置", "接線盒"] },
+          { start: 147, time: "02:27", title: "裝回壓力桶（確認孔洞對齊）", text: "裝回壓力桶時，請確認孔洞的對齊位置後平整放上。", tags: ["壓力桶", "孔洞", "對齊", "水機身"] },
+          { start: 155, time: "02:35", title: "鎖上水機身十字螺絲4顆", text: "使用十字螺絲起子鎖上水機身十字螺絲 4 顆，需平均鎖緊。", tags: ["水機身", "螺絲", "鎖緊"] },
+          { start: 186, time: "03:06", title: "將壓力開關線穿回並端子固定", text: "將壓力開關線穿回接線盒。依接線圖接線，注意接線處請使用端子固定，避免短路。", tags: ["接線盒", "端子", "接線", "短路"] },
+          { start: 209, time: "03:29", title: "蓋回接線盒，更換完成", text: "確認接線完畢，蓋回接線盒蓋子即可。恭喜，更換完成！更換下來的零件請妥善分類回收。", tags: ["完成", "接線盒", "ESG"] }
+        ]
+      },
+      {
+        videoId: "38tFHIkIFTs",
+        ep: "ep.2",
+        title: "TP8系列 - 水機身 & 機械軸封 更換教學",
+        shortTitle: "ep.2 TP8 水機身 & 軸封",
+        timeline: [
+          { start: 10, time: "00:10", title: "工具介紹", text: "膠帶*1、PTFE螺紋密封帶*1、一字螺絲起子*2、十字螺絲起子*1、直徑1.5cm及2cm塑膠圓管各1支、梅花扳手8-10mm*1、扭力扳手*1、噴水容器*1個。", tags: ["工具", "扭力扳手", "梅花扳手", "一字螺絲起子", "圓管", "噴水容器"] },
+          { start: 16, time: "00:16", title: "拆卸水機身上半部", text: "使用十字螺絲起子鬆開水機身上半部十字螺絲4顆，取下壓力桶並拆開接線盒取出線路。", tags: ["水機身", "十字螺絲起子", "壓力桶", "拆卸"] },
+          { start: 63, time: "01:03", title: "鬆開水機身下半部外六角螺絲", text: "使用梅花扳手鬆開水機身下半部外六角螺絲3顆，隨後取下水機身。", tags: ["梅花扳手", "外六角螺絲", "水機身", "拆卸"] },
+          { start: 93, time: "01:33", title: "拆卸葉輪中心固定螺絲", text: "使用十字螺絲起子鬆開葉輪中心固定螺絲。", tags: ["葉輪", "固定螺絲", "十字螺絲起子"] },
+          { start: 109, time: "01:49", title: "使用一字起子撬下葉輪", text: "使用兩支一字螺絲起子對稱撬起取下葉輪。取下葉輪後，彈簧可以直接拿起。", tags: ["葉輪", "一字螺絲起子", "彈簧", "撬起"] },
+          { start: 124, time: "02:04", title: "取下小鋼珠（重要防丟失）", text: "小鋼珠因卡槽不易拿起，可將機體翻倒，小鋼珠會自動掉出，請務必妥善保管。", tags: ["小鋼珠", "卡槽", "掉出", "翻倒"] },
+          { start: 139, time: "02:19", title: "拆下舊機械軸封轉部與定部", text: "使用一字螺絲起子取下軸封轉部；再用一或兩支一字螺絲起子取下軸封定部。水機身拆卸完成。", tags: ["軸封", "機械軸封", "轉部", "定部", "一字螺絲起子"] },
+          { start: 185, time: "03:05", title: "噴乾淨水/RO水潤滑軸心", text: "裝軸封前請先在軸與軸封上噴水（RO水或乾淨的水），以免橡膠受摩擦力影響而出現損壞。", tags: ["噴水", "RO水", "潤滑", "摩擦力", "軸封"] },
+          { start: 196, time: "03:16", title: "壓入新軸封定部（黑色橡膠面朝上）", text: "黑色橡膠面朝上裝回軸封定部，使用直徑2cm圓管均勻施力壓到底即可。", tags: ["軸封定部", "圓管", "黑色橡膠", "壓到底"] },
+          { start: 206, time: "03:26", title: "壓入新軸封轉部（黑色橡膠面朝下）", text: "黑色橡膠面朝下裝回軸封轉部，使用直徑1.5cm圓管均勻施力壓到底即可。", tags: ["軸封轉部", "圓管", "黑色橡膠", "壓到底"] },
+          { start: 221, time: "03:41", title: "裝回小鋼珠與彈簧", text: "將小鋼珠放回軸心凹槽處，再套上彈簧。", tags: ["小鋼珠", "彈簧", "凹槽"] },
+          { start: 242, time: "04:02", title: "裝回葉輪（小孔對齊小鋼珠）", text: "裝回葉輪時，請留意葉輪上有個小孔，需將小孔與小鋼珠對齊後再將葉輪裝回，並用十字螺絲起子鎖上中心螺絲。", tags: ["葉輪", "小孔", "小鋼珠", "對齊", "固定螺絲"] },
+          { start: 269, time: "04:29", title: "裝回水機身下半部與外六角螺絲", text: "裝上水機身下半部，使用梅花扳手初步鎖上3顆外六角螺絲。", tags: ["水機身", "外六角螺絲", "梅花扳手"] },
+          { start: 320, time: "05:20", title: "扭力扳手依規格平均鎖緊", text: "更換扭力扳手鎖上外六角螺絲3顆。確保螺絲鎖附力量平均，請務必使用扭力扳手控制力道。", tags: ["扭力扳手", "外六角螺絲", "鎖緊", "磅數"] },
+          { start: 343, time: "05:43", title: "裝回壓力桶與上半部水機身", text: "確認孔洞對齊裝上壓力桶，鎖回4顆十字螺絲，並將接線盒線路接回後蓋上盒子，更換作業完成！", tags: ["壓力桶", "水機身", "接線盒", "完成"] }
+        ]
+      },
+      {
+        videoId: "mS6_daEbkYg",
+        ep: "ep.3",
+        title: "HQ_B系列 - 葉輪 & 壓力桶 更換教學",
+        shortTitle: "ep.3 HQ_B 葉輪 & 壓力桶",
+        timeline: [
+          { start: 8, time: "00:08", title: "工具介紹", text: "內六角扳手*1支 (5號)、開口扳手*2支 (13號與15號)。", tags: ["工具", "內六角扳手", "開口扳手", "5號", "13號", "15號"] },
+          { start: 13, time: "00:13", title: "使用內六角扳手拆下壓力桶螺絲", text: "使用5號內六角扳手鬆開壓力桶周圍螺絲，取下不鏽鋼壓力桶外蓋。", tags: ["壓力桶", "內六角扳手", "螺絲", "拆下"] },
+          { start: 42, time: "00:42", title: "拆卸葉輪固定螺帽（需大力擰開）", text: "使用開口扳手拆下葉輪上的固定螺帽，原廠迫緊較牢固需大力擰開。", tags: ["葉輪", "螺帽", "開口扳手", "擰開"] },
+          { start: 62, time: "01:02", title: "準備全新葉輪與壓力桶備品", text: "更換新的葉輪與壓力桶零組件。", tags: ["備品", "更換", "新品", "葉輪", "壓力桶"] },
+          { start: 68, time: "01:08", title: "放上葉輪並確認安裝順序", text: "依安裝順序 (Assembly Sequence) 放上全新葉輪，並放上兩顆螺帽。", tags: ["葉輪", "安裝順序", "螺帽"] },
+          { start: 78, time: "01:18", title: "雙扳手反向相互施力鎖緊螺帽", text: "使用兩支開口扳手朝反方向相互施力，將葉輪兩顆防鬆螺帽確實鎖緊逼牢。", tags: ["開口扳手", "反向施力", "鎖緊", "螺帽", "迫緊"] },
+          { start: 101, time: "01:41", title: "安裝壓力桶（箭頭朝向出一點鐘方向）", text: "將壓力桶上的箭頭朝向出水孔（一點鐘方向）正確角度安裝。", tags: ["壓力桶", "箭頭", "出水孔", "角度", "一點鐘方向"] },
+          { start: 114, time: "01:54", title: "依序放入 4 支長螺絲與 2 支短螺絲", text: "依序放回長螺絲4支與短螺絲2支，確認四周長螺絲與短螺絲的位置配置圖。", tags: ["長螺絲", "短螺絲", "螺絲位置", "配置"] },
+          { start: 135, time: "02:15", title: "先鎖長再鎖短，對角平均鎖緊", text: "先鎖長螺絲再鎖短螺絲，使用內六角扳手對角平均鎖附，避免受力不均導致漏水。更換完成！", tags: ["長螺絲", "短螺絲", "對角鎖緊", "內六角扳手", "完成"] }
+        ]
+      }
+    ];
+
+    let currentVideoIndex = 0;
+    const isWebPage = ['http:', 'https:'].includes(window.location.protocol);
+    let youtubePlayer = null;
+    let playerReady = false;
+    let selectedSeconds = 0;
+    let apiFailed = false;
+    const failedVideos = new Set();
+
+    function showPlaybackFallback(message) {
+      document.getElementById('playbackMessage').textContent = message;
+      document.getElementById('playbackFallback').hidden = false;
+    }
+
+    function onYouTubeIframeAPIReady() {
+      youtubePlayer = new YT.Player('videoPlayer', {
+        events: {
+          onReady: () => {
+            playerReady = true;
+            const video = playlistData[currentVideoIndex];
+            if (!failedVideos.has(video.videoId)) {
+              youtubePlayer.cueVideoById({videoId: video.videoId, startSeconds: selectedSeconds});
+            }
+          },
+          onError: event => {
+            const loadedId = event.target.getVideoData().video_id;
+            const video = playlistData[currentVideoIndex];
+            if (loadedId && loadedId !== video.videoId) return;
+            failedVideos.add(video.videoId);
+            const message = [101, 150].includes(event.data)
+              ? '這部影片限制嵌入播放，請在 YouTube 開啟此片段。'
+              : event.data === 100
+                ? '影片已移除、設為私人或無法存取，請在 YouTube 確認。'
+                : `播放器無法載入（${event.data}），請在 YouTube 開啟此片段。`;
+            showPlaybackFallback(message);
+          }
+        }
+      });
+    }
+
+    function retryPlayback() {
+      failedVideos.delete(playlistData[currentVideoIndex].videoId);
+      if (apiFailed) { window.location.reload(); return; }
+      loadVideo(playlistData[currentVideoIndex].videoId, selectedSeconds);
+    }
+
+    function loadVideo(videoId, seconds) {
+      const iframe = document.getElementById('videoPlayer');
+      selectedSeconds = seconds;
+      if (!isWebPage || apiFailed || failedVideos.has(videoId)) {
+        showPlaybackFallback('請在 YouTube 開啟此片段，從選定時間播放。');
+        return;
+      }
+      document.getElementById('playbackFallback').hidden = true;
+      if (playerReady) {
+        youtubePlayer.loadVideoById({videoId, startSeconds: seconds});
+        return;
+      }
+      if (youtubePlayer) return;
+      const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+      embedUrl.search = new URLSearchParams({
+        start: String(Math.floor(seconds)),
+        autoplay: '1',
+        playsinline: '1',
+        enablejsapi: '1',
+        origin: window.location.origin
+      }).toString();
+      iframe.src = embedUrl.href;
+    }
+
+    function youtubeLink(videoId, seconds) {
+      return `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(seconds)}s`;
+    }
+
+    // 初始化 Tab
+    function initTabs() {
+      const tabsContainer = document.getElementById('playlistTabs');
+      tabsContainer.innerHTML = playlistData.map((v, idx) => `
+        <button class="tab-btn ${idx === 0 ? 'active' : ''}" onclick="selectVideo(${idx})">
+          ${v.shortTitle}
+        </button>
+      `).join('');
+    }
+
+    // 切換影片
+    function selectVideo(index, startSeconds = 0) {
+      currentVideoIndex = index;
+      const video = playlistData[index];
+
+      // 更新 Tab 狀態
+      const tabs = document.querySelectorAll('.tab-btn');
+      tabs.forEach((tab, i) => tab.classList.toggle('active', i === index));
+
+      // 嵌入播放器需要由 HTTP/HTTPS 頁面送出真實來源。
+      document.getElementById('currentVideoTitle').innerText = `${video.ep}：${video.title}`;
+      loadVideo(video.videoId, startSeconds);
+
+      updateStatus(startSeconds);
+
+      // 若目前未開啟全局搜尋，重新渲染該影片時間軸
+      const isSearchAll = document.getElementById('searchAllVideosCheckbox').checked;
+      const query = document.getElementById('searchInput').value;
+      if (!isSearchAll || !query.trim()) {
+        renderFilteredResults();
+      }
+    }
+
+    // 格式化秒數
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function updateStatus(sec) {
+      const video = playlistData[currentVideoIndex];
+      const timeStr = formatTime(sec);
+      document.getElementById('playerLocationText').innerText = isWebPage
+        ? `選定時間：${timeStr}`
+        : '請從本機網址開啟；或點選 YouTube 連結播放';
+      
+      const directLink = document.getElementById('directYtLink');
+      directLink.href = youtubeLink(video.videoId, sec);
+      directLink.innerText = `在 YouTube 開啟 (${video.ep} @ ${timeStr}) ↗`;
+      document.getElementById('fallbackLink').href = directLink.href;
+
+      // 標註卡片 Active
+      const cards = document.querySelectorAll('.timeline-card');
+      cards.forEach(card => {
+        const vId = card.getAttribute('data-videoid');
+        const cardStart = parseFloat(card.getAttribute('data-start'));
+        if (vId === video.videoId && Math.abs(cardStart - sec) < 2) {
+          card.classList.add('active');
+        } else {
+          card.classList.remove('active');
+        }
+      });
+    }
+
+    // 點擊跳轉到指定影片與時間
+    function jumpToItem(videoIndex, seconds) {
+      if (currentVideoIndex !== videoIndex) {
+        selectVideo(videoIndex, seconds);
+      } else {
+        const video = playlistData[videoIndex];
+        loadVideo(video.videoId, seconds);
+        updateStatus(seconds);
+      }
+      if (!isWebPage || apiFailed || failedVideos.has(playlistData[videoIndex].videoId)) {
+        window.open(youtubeLink(playlistData[videoIndex].videoId, seconds), '_blank', 'noopener');
+      }
+    }
+
+    // 關鍵字高亮
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+
+    function highlight(text, kw) {
+      text = escapeHtml(text);
+      kw = escapeHtml(kw);
+      if (!kw.trim()) return text;
+      const regex = new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    // 篩選與渲染
+    function renderFilteredResults() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      const searchAll = document.getElementById('searchAllVideosCheckbox').checked;
+      const container = document.getElementById('timelineList');
+      const countDisplay = document.getElementById('resultsCount');
+
+      let candidateList = [];
+
+      playlistData.forEach((v, vIdx) => {
+        if (!searchAll && vIdx !== currentVideoIndex) return;
+
+        v.timeline.forEach(item => {
+          const matchTitle = item.title.toLowerCase().includes(query);
+          const matchText = item.text.toLowerCase().includes(query);
+          const matchTags = item.tags.some(t => t.toLowerCase().includes(query));
+          const matchEp = v.ep.toLowerCase().includes(query) || v.title.toLowerCase().includes(query);
+
+          if (!query || matchTitle || matchText || matchTags || matchEp) {
+            candidateList.push({
+              videoIndex: vIdx,
+              videoId: v.videoId,
+              ep: v.ep,
+              videoTitle: v.title,
+              ...item
+            });
+          }
+        });
+      });
+
+      if (candidateList.length === 0) {
+        countDisplay.innerText = `搜尋「${query}」：無相符片段`;
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>在 ${searchAll ? '所有影片' : playlistData[currentVideoIndex].ep} 中找不到符合「<strong>${escapeHtml(query)}</strong>」的內容。<br>試試：<strong>軸封</strong>、<strong>扭力扳手</strong>、<strong>小鋼珠</strong>、<strong>壓力桶</strong>。</p>
+          </div>
+        `;
+        return;
+      }
+
+      countDisplay.innerText = query
+        ? `搜尋「${query}」：在 ${searchAll ? '全播放清單' : playlistData[currentVideoIndex].ep} 共找到 ${candidateList.length} 個命中點`
+        : `顯示 ${searchAll ? '全清單' : playlistData[currentVideoIndex].ep} 關鍵步驟（共 ${candidateList.length} 個章節）`;
+
+      container.innerHTML = candidateList.map(item => `
+        <div class="timeline-card" 
+             data-videoid="${item.videoId}" 
+             data-start="${item.start}" 
+             onclick="jumpToItem(${item.videoIndex}, ${item.start})">
+          <div class="card-top">
+            <span class="source-badge">${item.ep} · ${item.videoTitle.split('-')[1] || item.videoTitle}</span>
+            <span class="time-badge">${item.time}</span>
+          </div>
+          <div class="card-title">${highlight(item.title, query)}</div>
+          <div class="card-text">${highlight(item.text, query)}</div>
+          <button class="jump-btn" onclick="event.stopPropagation(); jumpToItem(${item.videoIndex}, ${item.start})">
+            <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            切換至此點播放 (${item.ep} ${item.time})
+          </button>
+          <a class="yt-direct-link" href="${youtubeLink(item.videoId, item.start)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">在 YouTube 播放此片段 ↗</a>
+        </div>
+      `).join('');
+    }
+
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', renderFilteredResults);
+    document.getElementById('searchAllVideosCheckbox').addEventListener('change', renderFilteredResults);
+
+    function applyTag(kw) {
+      searchInput.value = kw;
+      renderFilteredResults();
+    }
+
+    // 初始化
+    initTabs();
+    selectVideo(0, 0);
+    renderFilteredResults();
+    if (isWebPage) {
+      const apiScript = document.createElement('script');
+      apiScript.src = 'https://www.youtube.com/iframe_api';
+      apiScript.onerror = () => {
+        apiFailed = true;
+        showPlaybackFallback('播放器連線失敗，請在 YouTube 開啟此片段。');
+      };
+      document.head.appendChild(apiScript);
+    }
+  </script>
+</body>
+</html>
