@@ -63,6 +63,8 @@ for (const protocol of ['https:', 'file:']) {
     assert.match(elements.fallbackLink.href, /t=124s$/);
     context.retryPlayback();
     assert.equal(elements.playbackFallback.hidden, true);
+    handlers.onError({data: 153, target: {getVideoData: () => undefined}});
+    assert.equal(elements.playbackFallback.hidden, false);
     apiScript.onerror();
     context.jumpToItem(1, 221);
     assert.match(opened, /t=221s$/);

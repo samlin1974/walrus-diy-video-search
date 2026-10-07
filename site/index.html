@@ -369,6 +369,27 @@
       border-radius: 10px;
       border: 1px dashed var(--border);
     }
+
+    .assistant-link {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 1000;
+      background: #1C64F2;
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+    }
+
+    .assistant-link[hidden] { display: none; }
+    #dify-chatbot-bubble-button { background-color: #1C64F2 !important; }
+    #dify-chatbot-bubble-window {
+      width: min(24rem, calc(100vw - 24px)) !important;
+      height: min(40rem, calc(100dvh - 96px)) !important;
+    }
   </style>
 </head>
 <body>
@@ -448,6 +469,8 @@
       </section>
     </div>
   </div>
+
+  <a id="maintenanceAssistant" class="assistant-link" href="http://10.1.66.60:3001/chat/zfHi10S6croxR7ND" target="_blank" rel="noopener" aria-label="開啟維修助手（新分頁）">開啟維修助手</a>
 
   <script>
     // 播放清單全部影片詳細 Transcript 結構庫
@@ -538,7 +561,7 @@
             }
           },
           onError: event => {
-            const loadedId = event.target.getVideoData().video_id;
+            const loadedId = event.target.getVideoData()?.video_id;
             const video = playlistData[currentVideoIndex];
             if (loadedId && loadedId !== video.videoId) return;
             failedVideos.add(video.videoId);
@@ -766,6 +789,34 @@
         showPlaybackFallback('播放器連線失敗，請在 YouTube 開啟此片段。');
       };
       document.head.appendChild(apiScript);
+    }
+  </script>
+  <script>
+    window.difyChatbotConfig = {
+      token: 'zfHi10S6croxR7ND',
+      baseUrl: 'http://10.1.66.60:3001',
+      inputs: {},
+      systemVariables: {},
+      userVariables: {}
+    };
+
+    // HTTPS pages cannot load an HTTP chatbot; keep the direct link available.
+    if (window.location.protocol === 'http:') {
+      const assistantLink = document.getElementById('maintenanceAssistant');
+      const chatbotScript = document.createElement('script');
+      chatbotScript.src = window.difyChatbotConfig.baseUrl + '/embed.min.js';
+      chatbotScript.id = window.difyChatbotConfig.token;
+      chatbotScript.defer = true;
+      const observer = new MutationObserver(() => {
+        if (document.getElementById('dify-chatbot-bubble-button')) {
+          assistantLink.hidden = true;
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, {childList: true, subtree: true});
+      chatbotScript.onerror = () => observer.disconnect();
+      document.body.appendChild(chatbotScript);
+      setTimeout(() => observer.disconnect(), 15000);
     }
   </script>
 </body>
